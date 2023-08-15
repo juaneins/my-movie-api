@@ -2,6 +2,7 @@ from fastapi import FastAPI, Body, Path, Query
 from fastapi.responses import HTMLResponse as response, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from http import HTTPStatus
 
 
 app = FastAPI()
@@ -76,36 +77,36 @@ def message():
     """)
 
 
-@app.get("/movies", tags=['movies'], response_model=List[Movie])
+@app.get("/movies", tags=['movies'], response_model=List[Movie], status_code=HTTPStatus.OK)
 def get_movies():
-    return JSONResponse(content=movies)
+    return JSONResponse(status_code=HTTPStatus.OK, content=movies)
 
 
-@app.get("/movies/{id}", tags=['movie'], response_model=List[Movie])
+@app.get("/movies/{id}", tags=['movie'], response_model=List[Movie], status_code=HTTPStatus.OK)
 def get_movie(id: int = Path(ge=1, le=2000)):
     for movie in movies:
         # print(movie['title'])
         if movie['id'] == id:
-            return JSONResponse(content=movie)
-    return JSONResponse(content=[])
+            return JSONResponse(status_code=HTTPStatus.OK, content=movie)
+    return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content=[])
 
 
-@app.get('/movies/', tags=['movies'], response_model=Movie)
+@app.get('/movies/', tags=['movies'], response_model=Movie, status_code=HTTPStatus.OK)
 def get_movies_by_category(category: str = Query(min_length=3, max_length=15)):
     # for item in movies:
     #     print(item['category'])
     #     if item['category'] == category:
     #         return item
-    return JSONResponse(content=list(filter(lambda movie: movie['category'] == category, movies)))
+    return JSONResponse(status_code=HTTPStatus.OK, content=list(filter(lambda movie: movie['category'] == category, movies)))
 
 
-@app.post('/movies', tags=['movies'])
+@app.post('/movies', tags=['movies'], status_code=HTTPStatus.CREATED)
 def create_movie(movie: Movie):
     movies.append(movie.model_dump())
-    return JSONResponse(content={"message": "The movie has been registered"})
+    return JSONResponse(status_code=HTTPStatus.CREATED, content={"message": "The movie has been registered"})
 
 
-@app.put('/movies/{id}', tags=['movies'])
+@app.put('/movies/{id}', tags=['movies'], status_code=HTTPStatus.OK)
 def update_movie(id: int, movie: Movie):
     for item in movies:
         if item['id'] == id:
@@ -117,7 +118,7 @@ def update_movie(id: int, movie: Movie):
             return JSONResponse(content={"message": "The movie has been updated"})
 
 
-@app.delete('/movies/{id}', tags=['movies'])
+@app.delete('/movies/{id}', tags=['movies'], status_code=HTTPStatus.OK)
 def delete_movie(id: int):
     for item in movies:
         if item['id'] == id:
