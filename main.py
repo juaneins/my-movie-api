@@ -1,18 +1,21 @@
 from fastapi import Depends, FastAPI, Body, HTTPException, Path, Query
 from fastapi.responses import HTMLResponse as response, JSONResponse
-from fastapi.security.http import HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
-from typing import Any, Coroutine, Optional, List
+from typing import Optional, List
 from http import HTTPStatus
 
 from starlette.requests import Request
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
+from config.database import Session, Base, engine
+from models.movie import Movie as MovieModel
 
 
 app = FastAPI()
 app.title = "My FastAPI application"
 app.version = '0.0.1'
+
+Base.metadata.create_all(bind=engine)
 
 
 class JWTBearer(HTTPBearer):
@@ -127,8 +130,12 @@ def get_movies_by_category(category: str = Query(min_length=3, max_length=15)):
 
 
 @app.post('/movies', tags=['movies'], status_code=HTTPStatus.CREATED)
-def create_movie(movie: Movie):
-    movies.append(movie.model_dump())
+def create_movie(movie: Movie) -> dict:
+    db = Session()
+    new_movie = MovieModel(**movie.model_dump())
+    db.add(new_movie)
+    db.commit()
+    # movies.append(movie.model_dump())
     return JSONResponse(status_code=HTTPStatus.CREATED, content={"message": "The movie has been registered"})
 
 
