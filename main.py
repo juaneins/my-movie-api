@@ -49,7 +49,7 @@ class Movie(BaseModel):
                     "id": 99,
                     "title": "The Hyper Human",
                     "overview": "movie description ....",
-                    "year": "2018",
+                    "year": 2018,
                     "rating": 8.8,
                     "category": "fantasy"
                 }
@@ -153,21 +153,28 @@ def create_movie(movie: Movie) -> dict:
     return JSONResponse(status_code=HTTPStatus.CREATED, content={"message": "The movie has been registered"})
 
 
-@app.put('/movies/{id}', tags=['movies'], status_code=HTTPStatus.OK)
-def update_movie(id: int, movie: Movie):
-    for item in movies:
-        if item['id'] == id:
-            item['title'] = movie.title
-            item['overview'] = movie.overview
-            item['year'] = movie.year
-            item['rating'] = movie.rating
-            item['category'] = movie.category
-            return JSONResponse(content={"message": "The movie has been updated"})
+@app.put('/movies/{id}', tags=['movies'], response_model=dict, status_code=HTTPStatus.OK)
+def update_movie(id: int, movie: Movie) -> dict:
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={'message': "The movie hasn't been found"})
+
+    result.title = movie.title
+    result.overview = movie.overview
+    result.year = movie.year
+    result.rating = movie.rating
+    result.category = movie.category
+    db.commit()
+    return JSONResponse(status_code=HTTPStatus.OK, content={'message': "The movie has been updated"})
 
 
-@app.delete('/movies/{id}', tags=['movies'], status_code=HTTPStatus.OK)
-def delete_movie(id: int):
-    for item in movies:
-        if item['id'] == id:
-            movies.remove(item)
-            return JSONResponse(content={"message": "The movie has been deleted"})
+@app.delete('/movies/{id}', tags=['movies'], response_model=dict, status_code=HTTPStatus.OK)
+def delete_movie(id: int) -> dict:
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={'message': "The movie hasn't been found"})
+    db.delete(result)
+    db.commit()
+    return JSONResponse(status_code=HTTPStatus.OK, content={"message": "The movie has been deleted"})
