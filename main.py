@@ -1,31 +1,26 @@
-from fastapi import Depends, FastAPI, Body, HTTPException, Path, Query
+from fastapi import Depends, FastAPI, Body, Path, Query, Request
 from fastapi.responses import HTMLResponse as response, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from http import HTTPStatus
 
-from starlette.requests import Request
-from jwt_manager import create_token, validate_token
-from fastapi.security import HTTPBearer
+from jwt_manager import create_token
+
 from config.database import Session, Base, engine
 from models.movie import Movie as MovieModel
 from fastapi.encoders import jsonable_encoder
+from middlewares.error_handler import ErrorHandler
+from middlewares.jwt_bearer import JWTBearer
 
 
 app = FastAPI()
 app.title = "My FastAPI application"
 app.version = '0.0.1'
 
+# app.add_middleware(JWTBearer) --> se llama directamente la clase
+app.add_middleware(ErrorHandler)
+
 Base.metadata.create_all(bind=engine)
-
-
-class JWTBearer(HTTPBearer):
-    async def __call__(self, request: Request):
-        auth = await super().__call__(request)
-        data = validate_token(auth.credentials)
-        if (data["email"] != "admin@mail.com"):
-            raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
-                                detail="Credenetials are invalid")
 
 
 class User(BaseModel):
