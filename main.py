@@ -9,6 +9,7 @@ from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
 from config.database import Session, Base, engine
 from models.movie import Movie as MovieModel
+from fastapi.encoders import jsonable_encoder
 
 
 app = FastAPI()
@@ -107,17 +108,24 @@ def login(user: User):
 
 
 @app.get("/movies", tags=['movies'], response_model=List[Movie], status_code=HTTPStatus.OK, dependencies=[Depends(JWTBearer())])
-def get_movies():
-    return JSONResponse(status_code=HTTPStatus.OK, content=movies)
+def get_movies() -> List[Movie]:
+    db = Session()
+    result = db.query(MovieModel).all()
+    return JSONResponse(status_code=HTTPStatus.OK, content=jsonable_encoder(result))
 
 
 @app.get("/movies/{id}", tags=['movie'], response_model=List[Movie], status_code=HTTPStatus.OK)
 def get_movie(id: int = Path(ge=1, le=2000)):
-    for movie in movies:
-        # print(movie['title'])
-        if movie['id'] == id:
-            return JSONResponse(status_code=HTTPStatus.OK, content=movie)
-    return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content=[])
+    # for movie in movies:
+    #     # print(movie['title'])
+    #     if movie['id'] == id:
+    #         return JSONResponse(status_code=HTTPStatus.OK, content=movie)
+    # return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content=[])
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={'message': "Not found!"})
+    return JSONResponse(status_code=HTTPStatus.OK, content=jsonable_encoder(result))
 
 
 @app.get('/movies/', tags=['movies'], response_model=Movie, status_code=HTTPStatus.OK)
@@ -126,7 +134,13 @@ def get_movies_by_category(category: str = Query(min_length=3, max_length=15)):
     #     print(item['category'])
     #     if item['category'] == category:
     #         return item
-    return JSONResponse(status_code=HTTPStatus.OK, content=list(filter(lambda movie: movie['category'] == category, movies)))
+    # return JSONResponse(status_code=HTTPStatus.OK, content=list(filter(lambda movie: movie['category'] == category, movies)))
+    db = Session()
+    result = db.query(MovieModel).filter(
+        MovieModel.category == category).all()
+    if not result:
+        return JSONResponse(status_code=HTTPStatus.NOT_FOUND, content={"message": "Not found!"})
+    return JSONResponse(status_code=HTTPStatus.OK, content=jsonable_encoder(result))
 
 
 @app.post('/movies', tags=['movies'], status_code=HTTPStatus.CREATED)
